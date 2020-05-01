@@ -45,7 +45,6 @@ namespace Lab2_Tomographycs
             NextFPSUpdate = DateTime.Now.AddSeconds(1);
             needReload = true;
             comboBox1.SelectedIndex = 0;
-            MessageBox.Show(comboBox1.SelectedIndex.ToString() + '\n' + comboBox1.SelectedItem);
         }
 
         private void Form1_Load(object sender, EventArgs e)
