@@ -26,11 +26,6 @@ namespace Lab2_Tomographycs
                 this.Text = String.Format("CT Vizualizer (fps = {0})", frameCount);
                 NextFPSUpdate = DateTime.Now.AddSeconds(1);
                 frameCount = 0;
-                trackBar2.Maximum = 2000;
-                trackBar3.Maximum = 4000;
-                trackBar3.Minimum = 1;
-                trackBar2.Value = view.min;
-                trackBar3.Value = view.width;
             }
             frameCount++;
         }
@@ -53,12 +48,57 @@ namespace Lab2_Tomographycs
         }
         private void glControl1_Paint(object sender, PaintEventArgs e)
         {
-            draw();
+            switch (comboBox1.SelectedIndex)
+            {
+            case 0:
+                {
+                    if (loaded)
+                    {
+                        if (needReload)
+                        {
+                            view.generateTextureImage(currentLayer);
+                            view.Load2DTexture();
+                            needReload = false;
+                        }
+                        view.DrawTexture();
+                        glControl1.SwapBuffers();
+                    }
+                    break;
+                }
+            case 1:
+                {
+                    if (loaded)
+                    {
+                        view.DrawQuads(currentLayer);
+                        glControl1.SwapBuffers();
+                    }
+                    break;
+                }
+            case 2:
+                {
+                    if (loaded)
+                    {
+                        view.DrawQuadStrip(currentLayer);
+                        glControl1.SwapBuffers();
+                    }
+                    break;
+                }
+            }
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
         {
             currentLayer = trackBar1.Value;
+            needReload = true;
+        }
+        private void trackBar3_Scroll(object sender, EventArgs e)
+        {
+            view.width = trackBar3.Value;
+            needReload = true;
+        }
+        private void trackBar2_Scroll(object sender, EventArgs e)
+        {
+            view.min += trackBar2.Value - view.min;
             needReload = true;
         }
 
@@ -77,71 +117,18 @@ namespace Lab2_Tomographycs
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 string name = dialog.FileName;
-                Bin.readBIN(name);
+                bin.readBIN(name);
                 view.SetupView(glControl1.Width, glControl1.Height);
                 loaded = true;
                 glControl1.Invalidate();
                 trackBar1.Maximum = Bin.Z - 1;
+                trackBar2.Maximum = 2000;
+                trackBar3.Maximum = 4000;
+                trackBar3.Minimum = 1;
+                trackBar2.Value = view.min;
+                trackBar3.Value = view.width;
             }
         }
-
-        private void trackBar3_Scroll(object sender, EventArgs e)
-        {
-            needReload = true;
-            view.width = trackBar3.Value;
-            draw();
-        }
-        void draw()
-        {
-            switch (comboBox1.SelectedIndex)
-            {
-                case 0:
-                    {
-                        if (loaded)
-                        {
-                            if (needReload)
-                            {
-                                view.generateTextureImage(currentLayer);
-                                view.Load2DTexture();
-                                needReload = false;
-                            }
-                            view.DrawTexture();
-                            glControl1.SwapBuffers();
-                        }
-                        break;
-                    }
-                case 1:
-                    {
-                        if (loaded)
-                        {
-                            view.DrawQuads(currentLayer);
-                            glControl1.SwapBuffers();
-                        }
-                        break;
-                    }
-                case 2:
-                    {
-                        if (loaded)
-                        {
-                            view.DrawQuadStrip(currentLayer);
-                            glControl1.SwapBuffers();
-                        }
-                        break;
-                    }
-            }
-        }
-        private void trackBar2_Scroll(object sender, EventArgs e)
-        {
-            needReload = true;
-            view.min += trackBar2.Value - view.min;
-            draw();
-        }
-
-        private void listView1_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
             

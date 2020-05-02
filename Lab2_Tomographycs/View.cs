@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using OpenTK.Graphics.OpenGL;
@@ -15,12 +16,13 @@ namespace Lab2_Tomographycs
         public static int X, Y, Z;
         public static short[] array;
         public Bin() { }
-
-        static public void readBIN(string path)
+        public void readBIN(string path)
         {
             if (File.Exists(path))
             {
-                BinaryReader reader = new BinaryReader(File.Open(path, FileMode.Open));
+                BinaryReader reader =
+                    new BinaryReader(File.Open(path, FileMode.Open));
+
                 X = reader.ReadInt32();
                 Y = reader.ReadInt32();
                 Z = reader.ReadInt32();
@@ -34,7 +36,6 @@ namespace Lab2_Tomographycs
             }
         }
     };
-
     class View
     {
         int VBOtexture;
@@ -44,12 +45,21 @@ namespace Lab2_Tomographycs
         public void generateTextureImage(int layerNumber)
         {
             textureImage = new Bitmap(Bin.X, Bin.Y);
+            BitmapData srcData = textureImage.LockBits(new Rectangle(0, 0, Bin.X, Bin.Y), ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            int bytes = srcData.Stride * srcData.Height;
+            byte[] resultBuffer = new byte[bytes];
             for (int i = 0; i < Bin.X; ++i)
                 for (int j = 0; j < Bin.Y; ++j)
                 {
                     int pixelNumber = i + j * Bin.X + layerNumber * Bin.X * Bin.Y;
-                    textureImage.SetPixel(i, j, TransferFunction(Bin.array[pixelNumber]));
+                    resultBuffer[j * srcData.Stride + i * 4] =
+                        resultBuffer[j * srcData.Stride + i * 4 + 1] =
+                        resultBuffer[j * srcData.Stride + i * 4 + 2] =
+                        TransferFunction(Bin.array[pixelNumber]).R;
+                    resultBuffer[j * srcData.Stride + i * 4 + 3] = 255;
                 }
+            Marshal.Copy(resultBuffer, 0, srcData.Scan0, resultBuffer.Length);
+            textureImage.UnlockBits(srcData);
         }
         public void DrawTexture()
         {
@@ -74,15 +84,22 @@ namespace Lab2_Tomographycs
         public void Load2DTexture()
         {
             GL.BindTexture(TextureTarget.Texture2D, VBOtexture);
-            BitmapData data = textureImage.LockBits(new Rectangle(0, 0, textureImage.Width, textureImage.Height),
-                                     ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            BitmapData data = textureImage.LockBits(
+                new Rectangle(0, 0, textureImage.Width, textureImage.Height),
+                ImageLockMode.ReadOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
             GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgba,
-            data.Width, data.Height, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra, PixelType.UnsignedByte, data.Scan0);
+                data.Width, data.Height, 0, OpenTK.Graphics.OpenGL.PixelFormat.Bgra,
+                PixelType.UnsignedByte, data.Scan0);
+
             textureImage.UnlockBits(data);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
+                (int)TextureMinFilter.Linear);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter,
+                (int)TextureMagFilter.Linear);
+
             ErrorCode Er = GL.GetError();
-            string str = Er.ToString();
         }
         int clamp(int val, int min, int max)
         {
@@ -148,7 +165,6 @@ namespace Lab2_Tomographycs
         {
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             GL.Begin(BeginMode.QuadStrip);
-
             short val;
             for (int y_coord = 0; y_coord < Bin.Y - 2; y_coord+=2)
             {
